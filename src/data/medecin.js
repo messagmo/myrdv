@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { modifierLigne } = require('./outils');
 
 async function lister({ seulementActifs, serviceId }) {
   const r = await db.query(
@@ -13,4 +14,18 @@ async function lister({ seulementActifs, serviceId }) {
   return r.rows;
 }
 
-module.exports = { lister };
+async function creer({ nom, serviceId }) {
+  const r = await db.query(
+    `INSERT INTO medecin (nom, service_id)
+     VALUES ($1, $2)
+     RETURNING id, nom, service_id, statut`,
+    [nom, serviceId]
+  );
+  return r.rows[0];
+}
+
+async function modifier(id, champs) {
+  return modifierLigne('medecin', id, champs, 'id, nom, service_id, statut');
+}
+
+module.exports = { lister, creer, modifier };

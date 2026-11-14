@@ -44,6 +44,37 @@ async function listerParPatient(patientId) {
   return r.rows;
 }
 
+// Vue du personnel : tous les rendez-vous, filtrables par date, médecin et statut
+async function listerPourPersonnel({ date, medecinId, statut }) {
+  const r = await db.query(
+    `SELECT r.id,
+            r.statut,
+            to_char(r.date_creation AT TIME ZONE 'Africa/Douala', 'YYYY-MM-DD HH24:MI') AS date_creation,
+            p.nom AS patient_nom,
+            p.prenom AS patient_prenom,
+            p.telephone AS patient_telephone,
+            m.id AS medecin_id,
+            m.nom AS medecin,
+            s.nom AS service,
+            to_char(c.date, 'YYYY-MM-DD') AS date,
+            to_char(c.heure_debut, 'HH24:MI') AS heure_debut,
+            to_char(c.heure_fin, 'HH24:MI') AS heure_fin,
+            r.motif_demande,
+            r.motif_decision
+     FROM rendez_vous r
+     JOIN patient p ON p.id = r.patient_id
+     JOIN creneau c ON c.id = r.creneau_id
+     JOIN medecin m ON m.id = r.medecin_id
+     JOIN service s ON s.id = m.service_id
+     WHERE ($1::date IS NULL OR c.date = $1)
+       AND ($2::int IS NULL OR r.medecin_id = $2)
+       AND ($3::text IS NULL OR r.statut = $3)
+     ORDER BY c.date, c.heure_debut, r.id`,
+    [date, medecinId, statut]
+  );
+  return r.rows;
+}
+
 async function trouverParId(id) {
   const r = await db.query(
     'SELECT id, patient_id, creneau_id, statut FROM rendez_vous WHERE id = $1',
@@ -80,6 +111,7 @@ module.exports = {
   creer,
   existeDemandeActive,
   listerParPatient,
+  listerPourPersonnel,
   trouverParId,
   changerStatut,
   decider,

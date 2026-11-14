@@ -1,4 +1,12 @@
 const db = require('../config/db');
+const { modifierLigne } = require('./outils');
+
+const COLONNES = `creneau.id,
+  creneau.medecin_id,
+  to_char(creneau.date, 'YYYY-MM-DD') AS date,
+  to_char(creneau.heure_debut, 'HH24:MI') AS heure_debut,
+  to_char(creneau.heure_fin, 'HH24:MI') AS heure_fin,
+  creneau.statut`;
 
 // seulementDisponibles = true : créneaux futurs, disponibles et sans rendez-vous confirmé
 // (un rendez-vous en attente, refusé ou annulé ne bloque pas le créneau)
@@ -30,7 +38,7 @@ async function lister({ seulementDisponibles, medecinId, date }) {
   return r.rows;
 }
 
-// Infos nécessaires pour vérifier qu'un créneau peut être demandé
+// Infos nécessaires pour vérifier qu'un créneau peut être demandé ou modifié
 async function trouverParId(id) {
   const r = await db.query(
     `SELECT c.id,
@@ -51,4 +59,18 @@ async function trouverParId(id) {
   return r.rows[0] || null;
 }
 
-module.exports = { lister, trouverParId };
+async function creer({ medecinId, date, heureDebut, heureFin }) {
+  const r = await db.query(
+    `INSERT INTO creneau (medecin_id, date, heure_debut, heure_fin)
+     VALUES ($1, $2, $3, $4)
+     RETURNING ${COLONNES}`,
+    [medecinId, date, heureDebut, heureFin]
+  );
+  return r.rows[0];
+}
+
+async function modifier(id, champs) {
+  return modifierLigne('creneau', id, champs, COLONNES);
+}
+
+module.exports = { lister, trouverParId, creer, modifier };
