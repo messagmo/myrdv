@@ -1,6 +1,7 @@
 const ErreurMetier = require('./ErreurMetier');
 const creneauData = require('../data/creneau');
 const rdvData = require('../data/rendezVous');
+const { notifier } = require('../sms/notifications');
 
 // Motifs prédéfinis (non médicaux), identiques à la contrainte CHECK de la base
 const MOTIFS_DECISION = ['medecin_indisponible', 'demande_incomplete', 'autre'];
@@ -80,7 +81,11 @@ async function annuler(utilisateur, idBrut, { motif_decision } = {}) {
   const motif = estPatient ? null : verifierMotif(motif_decision);
 
   const resultat = await rdvData.changerStatut(id, 'annule', motif);
-  // Rôle 4 : déclencher ici la notification « annulation » (SMS Sandbox)
+  // Le patient est prévenu par SMS seulement quand c'est le personnel qui annule.
+  // notifier() ne lève jamais d'erreur : un échec SMS n'annule pas l'annulation enregistrée.
+  if (!estPatient) {
+    await notifier(id, 'annulation');
+  }
   return resultat;
 }
 
@@ -125,9 +130,9 @@ async function decider(idBrut, { statut, motif_decision } = {}) {
     throw new ErreurMetier(409, 'Cette demande a déjà été traitée.');
   }
 
-  // Rôle 4 : déclencher ici la notification « confirmation » ou « refus » (SMS Sandbox),
-  // uniquement après l'enregistrement effectif ci-dessus. Une erreur SMS ne doit pas
-  // annuler la décision déjà enregistrée.
+  // Notification envoyée uniquement après l'enregistrement effectif de la décision.
+  // notifier() ne lève jamais d'erreur : un échec SMS n'annule pas la décision.
+  await notifier(id, statut === 'confirme' ? 'confirmation' : 'refus');
   return resultat;
 }
 
