@@ -12,7 +12,7 @@ const API = "http://localhost:3000/api";
 
 // MODE DÉMO : true = fausses données, sans serveur.
 // Passer à false quand le backend du Rôle 2 est lancé (npm run dev).
-const MOCK = true;
+const MOCK = false;
 
 // Les motifs de refus / d'annulation acceptés par le serveur
 const MOTIFS = {
