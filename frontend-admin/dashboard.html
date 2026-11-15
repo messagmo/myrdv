@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MyRDV – Demandes de rendez-vous</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="css/admin.css">
+</head><body>
+<header id="entete"></header>
+<main>
+  <div id="msg"></div>
+  <div class="carte filtres">
+    <div><label for="f-date">Date</label><input type="date" id="f-date"></div>
+    <div><label for="f-med">Médecin</label><select id="f-med"><option value="">Tous</option></select></div>
+    <div><label for="f-statut">Statut</label>
+      <select id="f-statut"><option value="">Tous</option><option value="en_attente">En attente</option>
+      <option value="confirme">Confirmé</option><option value="refuse">Refusé</option><option value="annule">Annulé</option></select></div>
+    <button class="btn" id="f-ok">Rechercher</button>
+    <button class="btn sec" id="f-raz">Réinitialiser</button>
+  </div>
+  <div class="carte tableau">
+    <table>
+      <thead><tr><th>Patient</th><th>Service</th><th>Médecin</th><th>Date</th><th>Heure</th><th>Motif demandé</th><th>Statut</th><th>Actions</th></tr></thead>
+      <tbody id="corps"></tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Fenêtre pour choisir le motif d'un refus ou d'une annulation -->
+<dialog id="boite">
+  <h2 id="boite-titre"></h2>
+  <label for="boite-motif">Motif (obligatoire)</label>
+  <select id="boite-motif"></select>
+  <div class="erreur-boite" id="boite-erreur"></div>
+  <div class="boutons-boite">
+    <button class="btn sec" id="boite-annuler" type="button">Retour</button>
+    <button class="btn" id="boite-valider" type="button">Valider</button>
+  </div>
+</dialog>
+
+<script src="js/api.js"></script>
+<script src="js/dashboard.js"></script>
+</body></html>
