@@ -1,0 +1,89 @@
+diff --git a/frontend-patient/js/api.js b/frontend-patient/js/api.js
+index 85e2551..b21d410 100644
+--- a/frontend-patient/js/api.js
++++ b/frontend-patient/js/api.js
+@@ -25,18 +25,20 @@ const normSlot = s => ({
+   id: s.id, date: isoDate(pick(s, 'date')),
+   debut: hhmm(pick(s, 'start_time', 'heure_debut', 'heure_début', 'startTime')), fin: hhmm(pick(s, 'end_time', 'heure_fin', 'endTime'))
+ });
++// Motifs de décision du personnel (valeurs du backend -> texte affiché au patient)
++const MOTIFS_LIBELLES = { medecin_indisponible: 'Médecin indisponible', demande_incomplete: 'Demande incomplète', autre: 'Autre motif' };
+ const normRdv = a => ({
+   id: a.id, statut: normStatut(pick(a, 'statut', 'status')),
+   date: isoDate(pick(a, 'date', 'slot.date', 'creneau.date')),
+   debut: hhmm(pick(a, 'start_time', 'heure_debut', 'slot.start_time', 'creneau.heure_debut')),
+   fin: hhmm(pick(a, 'end_time', 'heure_fin', 'slot.end_time', 'creneau.heure_fin')),
+-  medecin: pick(a, 'doctor_name', 'medecin_nom', 'doctor.nom', 'doctor.name', 'medecin.nom') || '',
+-  service: pick(a, 'service_name', 'service_nom', 'doctor.service.nom', 'doctor.service_name', 'service.nom') || '',
+-  motif: pick(a, 'motif', 'reason') || '',
+-  motifRefus: pick(a, 'motif_refus', 'refusal_reason', 'decision_reason', 'reject_reason') || ''
++  medecin: pick(a, 'doctor_name', 'medecin_nom', 'medecin', 'doctor.nom', 'doctor.name', 'medecin.nom') || '',
++  service: pick(a, 'service_name', 'service_nom', 'service', 'doctor.service.nom', 'doctor.service_name', 'service.nom') || '',
++  motif: pick(a, 'motif', 'motif_demande', 'reason') || '',
++  motifRefus: MOTIFS_LIBELLES[pick(a, 'motif_decision')] || pick(a, 'motif_refus', 'refusal_reason', 'decision_reason', 'reject_reason') || ''
+ });
+ function normSession(r) {
+-  const u = pick(r, 'user', 'patient', 'data.user') || {};
++  const u = pick(r, 'user', 'utilisateur', 'patient', 'data.user') || {};
+   return {
+     token: pick(r, 'token', 'accessToken', 'access_token', 'data.token'),
+     user: { id: u.id, nom: u.nom || '', prenom: u.prenom || '', telephone: u.telephone || '', role: String(u.role || 'patient').toLowerCase() }
+@@ -101,7 +103,7 @@ const Api = {
+   // Corps : { nom, prenom, telephone, email?, password } -> session { token, user }
+   async register(p) {
+     if (!CONFIG.USE_MOCK) {
+-      const s = normSession(await post('/auth/register', p));
++      const s = normSession(await post('/auth/register', { nom: p.nom, prenom: p.prenom, telephone: p.telephone, email: p.email, mot_de_passe: p.password }));
+       return s.token ? s : this.login({ telephone: p.telephone, password: p.password });
+     }
+     await wait();
+@@ -118,7 +120,7 @@ const Api = {
+       const u = MOCK.get('users').find(x => x.telephone === telephone && x.password === password);
+       if (!u) throw new Error('Numéro ou mot de passe incorrect.');
+       s = normSession({ token: 'mock-' + u.id, user: u });
+-    } else s = normSession(await post('/auth/login', { telephone, password }));
++    } else s = normSession(await post('/auth/login', { identifiant: telephone, mot_de_passe: password }));
+     if (!s.token) throw new Error('Réponse inattendue du serveur.');
+     if (s.user.role !== 'patient') throw new Error('Ce compte est réservé au personnel de l\'hôpital.');
+     return s;
+@@ -134,12 +136,12 @@ const Api = {
+   },
+   // Créneaux libres d'un médecin : [{ id, date, start_time, end_time }]
+   async getSlots(doctorId) {
+-    const r = CONFIG.USE_MOCK ? (await wait(150), MOCK.slots(Number(doctorId))) : await request('/slots?doctor_id=' + encodeURIComponent(doctorId));
++    const r = CONFIG.USE_MOCK ? (await wait(150), MOCK.slots(Number(doctorId))) : await request('/slots?medecin_id=' + encodeURIComponent(doctorId));
+     return toList(r).map(normSlot).sort((a, b) => (a.date + a.debut).localeCompare(b.date + b.debut));
+   },
+   // Corps : { doctor_id, slot_id, motif? } -> rendez-vous créé, statut « en attente »
+   async createRdv({ doctorId, slotId, motif }) {
+-    if (!CONFIG.USE_MOCK) return post('/appointments', { doctor_id: doctorId, slot_id: slotId, motif: motif || undefined });
++    if (!CONFIG.USE_MOCK) return post('/appointments', { creneau_id: slotId, motif_demande: motif || undefined });
+     await wait();
+     const slot = MOCK.slots(Number(doctorId)).find(s => s.id === slotId);
+     if (!slot) throw new Error('Ce créneau vient d\'être pris. Choisissez un autre horaire.');
+diff --git a/frontend-patient/js/pages/register.js b/frontend-patient/js/pages/register.js
+index 927336d..3fc399a 100644
+--- a/frontend-patient/js/pages/register.js
++++ b/frontend-patient/js/pages/register.js
+@@ -7,7 +7,7 @@ form.addEventListener('submit', async e => {
+   if (!nom) return err.textContent = 'Entrez votre nom.';
+   if (!telephone) return err.textContent = 'Entrez un numéro camerounais valide, par exemple 6XX XX XX XX.';
+   if (email && !/^\S+@\S+\.\S+$/.test(email)) return err.textContent = 'L\'adresse e-mail n\'est pas valide.';
+-  if (password.length < 6) return err.textContent = 'Le mot de passe doit contenir au moins 6 caractères.';
++  if (password.length < 8) return err.textContent = 'Le mot de passe doit contenir au moins 8 caractères.';
+   if (password !== form.pw2.value) return err.textContent = 'Les deux mots de passe ne sont pas identiques.';
+   btn.disabled = true; btn.textContent = 'Création du compte…';
+   try { Auth.save(await Api.register({ nom, prenom, telephone, email: email || undefined, password })); location.href = 'services.html'; }
+diff --git a/frontend-patient/register.html b/frontend-patient/register.html
+index d47aff0..e344d51 100644
+--- a/frontend-patient/register.html
++++ b/frontend-patient/register.html
+@@ -7,7 +7,7 @@
+ <div class="field"><label for="nom">Nom</label><input class="input" id="nom" autocomplete="family-name" required></div>
+ <div class="field"><label for="tel">Téléphone (pour les SMS)</label><input class="input" id="tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="6XX XX XX XX" required><div class="hint">Numéro camerounais à 9 chiffres, commençant par 6.</div></div>
+ <div class="field"><label for="email">Adresse e-mail (facultatif)</label><input class="input" id="email" type="email" autocomplete="email"></div>
+-<div class="field"><label for="pw">Mot de passe</label><input class="input" id="pw" type="password" autocomplete="new-password" required><div class="hint">6 caractères minimum.</div></div>
++<div class="field"><label for="pw">Mot de passe</label><input class="input" id="pw" type="password" autocomplete="new-password" required><div class="hint">8 caractères minimum.</div></div>
+ <div class="field"><label for="pw2">Confirmer le mot de passe</label><input class="input" id="pw2" type="password" autocomplete="new-password" required></div>
+ <p class="hint" style="margin:0">Un SMS vous sera envoyé quand l'hôpital aura confirmé un rendez-vous.</p>
+ <button class="btn" id="submit" type="submit">Créer mon compte</button>
