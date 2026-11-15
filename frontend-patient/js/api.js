@@ -1,5 +1,5 @@
 // Tous les appels au back-end passent par ce fichier (voir CONTRAT_API.md).
-// USE_MOCK = true : données simulées (localStorage). Mettre false quand l'API Express est prête.
+// USE_MOCK = false : données simulées (localStorage). Mettre false quand l'API Express est prête.
 const CONFIG = { USE_MOCK: true, API_URL: 'http://localhost:3000/api' };
 
 // ---------- Adaptateurs : tolèrent snake_case / camelCase et les objets imbriqués ----------
