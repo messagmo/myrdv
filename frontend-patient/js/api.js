@@ -25,18 +25,20 @@ const normSlot = s => ({
   id: s.id, date: isoDate(pick(s, 'date')),
   debut: hhmm(pick(s, 'start_time', 'heure_debut', 'heure_début', 'startTime')), fin: hhmm(pick(s, 'end_time', 'heure_fin', 'endTime'))
 });
+// Motifs de décision du personnel (valeurs du backend -> texte affiché au patient)
+const MOTIFS_LIBELLES = { medecin_indisponible: 'Médecin indisponible', demande_incomplete: 'Demande incomplète', autre: 'Autre motif' };
 const normRdv = a => ({
   id: a.id, statut: normStatut(pick(a, 'statut', 'status')),
   date: isoDate(pick(a, 'date', 'slot.date', 'creneau.date')),
   debut: hhmm(pick(a, 'start_time', 'heure_debut', 'slot.start_time', 'creneau.heure_debut')),
   fin: hhmm(pick(a, 'end_time', 'heure_fin', 'slot.end_time', 'creneau.heure_fin')),
-  medecin: pick(a, 'doctor_name', 'medecin_nom', 'doctor.nom', 'doctor.name', 'medecin.nom') || '',
-  service: pick(a, 'service_name', 'service_nom', 'doctor.service.nom', 'doctor.service_name', 'service.nom') || '',
-  motif: pick(a, 'motif', 'reason') || '',
-  motifRefus: pick(a, 'motif_refus', 'refusal_reason', 'decision_reason', 'reject_reason') || ''
+  medecin: pick(a, 'doctor_name', 'medecin_nom', 'medecin', 'doctor.nom', 'doctor.name', 'medecin.nom') || '',
+  service: pick(a, 'service_name', 'service_nom', 'service', 'doctor.service.nom', 'doctor.service_name', 'service.nom') || '',
+  motif: pick(a, 'motif', 'motif_demande', 'reason') || '',
+  motifRefus: MOTIFS_LIBELLES[pick(a, 'motif_decision')] || pick(a, 'motif_refus', 'refusal_reason', 'decision_reason', 'reject_reason') || ''
 });
 function normSession(r) {
-  const u = pick(r, 'user', 'patient', 'data.user') || {};
+  const u = pick(r, 'user', 'utilisateur', 'patient', 'data.user') || {};
   return {
     token: pick(r, 'token', 'accessToken', 'access_token', 'data.token'),
     user: { id: u.id, nom: u.nom || '', prenom: u.prenom || '', telephone: u.telephone || '', role: String(u.role || 'patient').toLowerCase() }
@@ -101,7 +103,7 @@ const Api = {
   // Corps : { nom, prenom, telephone, email?, password } -> session { token, user }
   async register(p) {
     if (!CONFIG.USE_MOCK) {
-      const s = normSession(await post('/auth/register', p));
+      const s = normSession(await post('/auth/register', { nom: p.nom, prenom: p.prenom, telephone: p.telephone, email: p.email, mot_de_passe: p.password }));
       return s.token ? s : this.login({ telephone: p.telephone, password: p.password });
     }
     await wait();
@@ -118,7 +120,7 @@ const Api = {
       const u = MOCK.get('users').find(x => x.telephone === telephone && x.password === password);
       if (!u) throw new Error('Numéro ou mot de passe incorrect.');
       s = normSession({ token: 'mock-' + u.id, user: u });
-    } else s = normSession(await post('/auth/login', { telephone, password }));
+    } else s = normSession(await post('/auth/login', { identifiant: telephone, mot_de_passe: password }));
     if (!s.token) throw new Error('Réponse inattendue du serveur.');
     if (s.user.role !== 'patient') throw new Error('Ce compte est réservé au personnel de l\'hôpital.');
     return s;
@@ -134,12 +136,12 @@ const Api = {
   },
   // Créneaux libres d'un médecin : [{ id, date, start_time, end_time }]
   async getSlots(doctorId) {
-    const r = CONFIG.USE_MOCK ? (await wait(150), MOCK.slots(Number(doctorId))) : await request('/slots?doctor_id=' + encodeURIComponent(doctorId));
+    const r = CONFIG.USE_MOCK ? (await wait(150), MOCK.slots(Number(doctorId))) : await request('/slots?medecin_id=' + encodeURIComponent(doctorId));
     return toList(r).map(normSlot).sort((a, b) => (a.date + a.debut).localeCompare(b.date + b.debut));
   },
   // Corps : { doctor_id, slot_id, motif? } -> rendez-vous créé, statut « en attente »
   async createRdv({ doctorId, slotId, motif }) {
-    if (!CONFIG.USE_MOCK) return post('/appointments', { doctor_id: doctorId, slot_id: slotId, motif: motif || undefined });
+    if (!CONFIG.USE_MOCK) return post('/appointments', { creneau_id: slotId, motif_demande: motif || undefined });
     await wait();
     const slot = MOCK.slots(Number(doctorId)).find(s => s.id === slotId);
     if (!slot) throw new Error('Ce créneau vient d\'être pris. Choisissez un autre horaire.');

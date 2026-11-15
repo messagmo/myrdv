@@ -7,7 +7,7 @@ form.addEventListener('submit', async e => {
   if (!nom) return err.textContent = 'Entrez votre nom.';
   if (!telephone) return err.textContent = 'Entrez un numéro camerounais valide, par exemple 6XX XX XX XX.';
   if (email && !/^\S+@\S+\.\S+$/.test(email)) return err.textContent = 'L\'adresse e-mail n\'est pas valide.';
-  if (password.length < 6) return err.textContent = 'Le mot de passe doit contenir au moins 6 caractères.';
+  if (password.length < 8) return err.textContent = 'Le mot de passe doit contenir au moins 8 caractères.';
   if (password !== form.pw2.value) return err.textContent = 'Les deux mots de passe ne sont pas identiques.';
   btn.disabled = true; btn.textContent = 'Création du compte…';
   try { Auth.save(await Api.register({ nom, prenom, telephone, email: email || undefined, password })); location.href = 'services.html'; }
