@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MyRDV – Connexion du personnel</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="css/admin.css">
+</head><body>
+<main class="connexion">
+  <h1>MyRDV</h1><p>Espace administration</p>
+  <div class="carte">
+    <h2 style="margin-top:0">Connexion du personnel</h2>
+    <div id="msg"></div>
+    <form id="form">
+      <label for="identifiant">Identifiant</label>
+      <input id="identifiant" type="text" placeholder="Votre identifiant" required autocomplete="username">
+      <label for="mdp">Mot de passe</label>
+      <input id="mdp" type="password" placeholder="Votre mot de passe" required autocomplete="current-password">
+      <button class="btn large" type="submit">Se connecter</button>
+    </form>
+  </div>
+</main>
+<script src="js/api.js"></script>
+<script>
+// Connexion : le serveur attend identifiant + mot_de_passe + profil "personnel"
+document.querySelector("#form").addEventListener("submit", async function (evenement) {
+  evenement.preventDefault();
+  try {
+    const reponse = await apiFetch("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({
+        identifiant: document.querySelector("#identifiant").value.trim(),
+        mot_de_passe: document.querySelector("#mdp").value,
+        profil: "personnel"
+      })
+    });
+
+    // Sécurité : seul le personnel entre ici
+    if (!ROLES_PERSONNEL.includes(reponse.utilisateur.role)) {
+      throw new Error("Accès réservé au personnel autorisé.");
+    }
+    sessionStorage.setItem("token", reponse.token);
+    sessionStorage.setItem("user", JSON.stringify(reponse.utilisateur));
+    location.href = "dashboard.html";
+  } catch (erreur) {
+    msg(erreur.message, "err");
+  }
+});
+</script>
+</body></html>
