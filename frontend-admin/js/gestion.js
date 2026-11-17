@@ -5,7 +5,9 @@
 // fois ; la description de chaque onglet est dans l'objet ONGLETS.
 // ============================================================
 
-garde();
+const utilisateurConnecte = garde();
+// Le médecin n'a pas accès à cette page : retour à son tableau de bord
+if (estMedecin(utilisateurConnecte)) location.href = "dashboard.html";
 entete("gestion");
 
 const $ = function (selecteur) { return document.querySelector(selecteur); };
@@ -74,12 +76,28 @@ let elementEnEdition = null;     // élément en cours de modification (null = o
 const donnees = { services: [], doctors: [], slots: [] };   // ce qui vient de l'API
 
 
+// ----- Créneaux : on ne garde que ceux qui ne sont pas terminés -----
+function finDuCreneau(creneau) {
+  return new Date(String(creneau.date).slice(0, 10) + "T" + String(creneau.heure_fin).slice(0, 5));
+}
+function creneauAVenir(creneau) {
+  return finDuCreneau(creneau) > new Date();
+}
+function cleDeTri(creneau) {
+  return String(creneau.date).slice(0, 10) + String(creneau.heure_debut).slice(0, 5);
+}
+
+
 // ----- 1. Charger les données depuis l'API -----
 async function chargerTout() {
   try {
     donnees.services = await apiFetch("/services");
     donnees.doctors = await apiFetch("/doctors");
-    donnees.slots = await apiFetch("/slots");
+    // Les anciens créneaux (déjà terminés) ne s'affichent plus ; les autres sont triés par date
+    const tousLesCreneaux = await apiFetch("/slots");
+    donnees.slots = tousLesCreneaux.filter(creneauAVenir).sort(function (a, b) {
+      return cleDeTri(a).localeCompare(cleDeTri(b));
+    });
     dessinerPage();
   } catch (erreur) {
     msg(erreur.message, "err");

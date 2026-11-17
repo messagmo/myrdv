@@ -37,7 +37,8 @@ const mockDb = {
   ],
   slots: [
     { id: 1, medecin_id: 1, medecin: "Dr Démo Alpha", date: "2026-11-20", heure_debut: "08:00", heure_fin: "09:00", statut: "disponible" },
-    { id: 2, medecin_id: 2, medecin: "Dr Démo Beta", date: "2026-11-20", heure_debut: "09:00", heure_fin: "10:00", statut: "disponible" }
+    { id: 2, medecin_id: 2, medecin: "Dr Démo Beta", date: "2026-11-20", heure_debut: "09:00", heure_fin: "10:00", statut: "disponible" },
+    { id: 3, medecin_id: 1, medecin: "Dr Démo Alpha", date: "2020-01-10", heure_debut: "08:00", heure_fin: "09:00", statut: "disponible" }   // ancien créneau : ne doit pas s'afficher
   ],
   appointments: [
     { id: 1, statut: "en_attente", patient_nom: "Test", patient_prenom: "Fictif", patient_telephone: "670000000", medecin_id: 1, medecin: "Dr Démo Alpha", service: "Médecine générale", date: "2026-11-20", heure_debut: "08:00", heure_fin: "09:00", motif_demande: "controle", motif_decision: null },
@@ -57,8 +58,13 @@ function mockFetch(chemin, options) {
   const corps = options.body ? JSON.parse(options.body) : {};
 
   // Connexion : n'importe quel identifiant et mot de passe sont acceptés en démo
+  // Identifiant qui commence par « medecin » = connexion d'un médecin (Dr Démo Alpha, id 1)
   if (nomTable === "auth") {
-    return Promise.resolve({ token: "demo", utilisateur: { id: 1, nom: "Administrateur Démo", role: "administrateur" } });
+    const identifiant = String(corps.identifiant || "").toLowerCase();
+    const utilisateur = identifiant.startsWith("medecin")
+      ? { id: 9, nom: "Dr Démo Alpha", role: "medecin", medecin_id: 1 }
+      : { id: 1, nom: "Administrateur Démo", role: "administrateur" };
+    return Promise.resolve({ token: "demo", utilisateur: utilisateur });
   }
 
   const table = mockDb[nomTable];
@@ -66,6 +72,11 @@ function mockFetch(chemin, options) {
   // Lecture (avec filtres éventuels : ?statut=...&date=...&medecin_id=...)
   if (methode === "GET") {
     let resultat = table;
+    // Un médecin ne voit que ses propres rendez-vous
+    const connecte = JSON.parse(sessionStorage.getItem("user") || "null");
+    if (nomTable === "appointments" && estMedecin(connecte)) {
+      resultat = resultat.filter(function (ligne) { return ligne.medecin_id === connecte.medecin_id; });
+    }
     url.searchParams.forEach(function (valeur, cle) {
       if (valeur) {
         resultat = resultat.filter(function (ligne) { return String(ligne[cle]) === valeur; });
@@ -150,8 +161,14 @@ async function apiFetch(chemin, options = {}) {
 // 3. Session
 // ------------------------------------------------------------
 
-// Rôles autorisés dans l'espace admin (les deux ont les mêmes droits)
-const ROLES_PERSONNEL = ["administrateur", "agent_accueil"];
+// Rôles autorisés à entrer dans cet espace : le personnel (mêmes droits)
+// et le médecin, qui utilise le MÊME tableau de bord mais ne voit que ses rendez-vous.
+const ROLES_PERSONNEL = ["administrateur", "agent_accueil", "medecin"];
+
+// Vrai si l'utilisateur connecté est un médecin
+function estMedecin(utilisateur) {
+  return !!utilisateur && utilisateur.role === "medecin";
+}
 
 // À appeler en haut de chaque page protégée :
 // si on n'est pas connecté en tant que personnel, retour à login.html
@@ -200,19 +217,21 @@ function entete(pageActive) {
   const utilisateur = JSON.parse(sessionStorage.getItem("user") || "{}");
 
   const titre = creer("h1", "MyRDV");
-  titre.append(creer("small", "Espace administration"));
+  titre.append(creer("small", estMedecin(utilisateur) ? "Espace médecin" : "Espace administration"));
 
   const lienDemandes = creer("a", "Demandes", pageActive === "dashboard" ? "actif" : "");
   lienDemandes.href = "dashboard.html";
 
   const lienGestion = creer("a", "Gestion", pageActive === "gestion" ? "actif" : "");
   lienGestion.href = "gestion.html";
+  // Le médecin n'a pas accès à la gestion (services, médecins, créneaux)
+  const liens = estMedecin(utilisateur) ? [lienDemandes] : [lienDemandes, lienGestion];
 
   const boutonSortie = creer("button", "Déconnexion");
   boutonSortie.addEventListener("click", deconnexion);
 
   const navigation = creer("nav");
-  navigation.append(lienDemandes, lienGestion, creer("span", utilisateur.nom || ""), boutonSortie);
+  navigation.append(...liens, creer("span", utilisateur.nom || ""), boutonSortie);
 
   document.querySelector("#entete").append(titre, navigation);
 }

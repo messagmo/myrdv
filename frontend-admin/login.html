@@ -8,7 +8,7 @@
 <main class="connexion">
   <h1>MyRDV</h1><p>Espace administration</p>
   <div class="carte">
-    <h2 style="margin-top:0">Connexion du personnel</h2>
+    <h2 style="margin-top:0">Connexion du personnel et des médecins</h2>
     <div id="msg"></div>
     <form id="form">
       <label for="identifiant">Identifiant</label>
@@ -34,9 +34,9 @@ document.querySelector("#form").addEventListener("submit", async function (evene
       })
     });
 
-    // Sécurité : seul le personnel entre ici
+    // Sécurité : seuls le personnel et les médecins entrent ici
     if (!ROLES_PERSONNEL.includes(reponse.utilisateur.role)) {
-      throw new Error("Accès réservé au personnel autorisé.");
+      throw new Error("Accès réservé au personnel et aux médecins.");
     }
     sessionStorage.setItem("token", reponse.token);
     sessionStorage.setItem("user", JSON.stringify(reponse.utilisateur));

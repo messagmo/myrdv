@@ -1,13 +1,21 @@
 // ============================================================
 // dashboard.js : page « Demandes de rendez-vous »
-// Elle affiche les demandes, permet de filtrer, de confirmer,
-// de refuser (avec motif) et d'annuler (avec motif).
+// Le MÊME tableau de bord sert au personnel et aux médecins :
+//   - personnel : voit toutes les demandes, peut confirmer, refuser, annuler
+//   - médecin   : voit uniquement SES rendez-vous (lecture seule)
 // Les SMS au patient sont envoyés automatiquement par le backend :
 // cette page n'a rien à faire pour cela.
 // ============================================================
 
-garde();              // sécurité : réservé au personnel connecté
-entete("dashboard");  // barre du haut
+const utilisateur = garde();       // sécurité : réservé au personnel et aux médecins
+entete("dashboard");               // barre du haut
+
+const modeMedecin = estMedecin(utilisateur);
+
+// Un médecin peut-il confirmer / refuser ? Non par défaut : il consulte ses rendez-vous.
+// Mettre true si le Rôle 2 autorise le médecin à décider (route /status).
+const MEDECIN_PEUT_DECIDER = false;
+const afficherActions = !modeMedecin || MEDECIN_PEUT_DECIDER;
 
 const $ = function (selecteur) { return document.querySelector(selecteur); };
 
@@ -22,6 +30,19 @@ const LIBELLES = {
 // Décision en cours d'enregistrement dans la fenêtre de motif
 let decisionEnCours = null;
 
+// Adaptation de la page au profil connecté
+$("#titre-page").textContent = modeMedecin ? "Mes rendez-vous" : "Demandes de rendez-vous";
+if (modeMedecin) $("#f-med").parentElement.style.display = "none";    // pas de filtre médecin : ce sont ses rendez-vous
+if (!afficherActions) $("#th-actions").style.display = "none";        // pas de colonne Actions
+
+
+// ----- Rendez-vous : on ne garde que ceux qui ne sont pas encore terminés -----
+// Un ancien rendez-vous (date et heure de fin passées) ne s'affiche plus.
+function rendezVousAVenir(demande) {
+  const fin = new Date(String(demande.date).slice(0, 10) + "T" + String(demande.heure_fin).slice(0, 5));
+  return fin > new Date();
+}
+
 
 // ----- 1. Charger les demandes (avec les filtres choisis) -----
 async function chargerDemandes() {
@@ -29,13 +50,22 @@ async function chargerDemandes() {
   if ($("#f-date").value) filtres.set("date", $("#f-date").value);
   if ($("#f-med").value) filtres.set("medecin_id", $("#f-med").value);
   if ($("#f-statut").value) filtres.set("statut", $("#f-statut").value);
+  // Médecin : on demande explicitement ses propres rendez-vous
+  if (modeMedecin && utilisateur.medecin_id) filtres.set("medecin_id", utilisateur.medecin_id);
 
   // Exemple de résultat : "/appointments?statut=en_attente&date=2026-11-20"
   let chemin = "/appointments";
   if (filtres.toString() !== "") chemin += "?" + filtres.toString();
 
   try {
-    afficherDemandes(await apiFetch(chemin));
+    let demandes = await apiFetch(chemin);
+    // Les anciens rendez-vous ne s'affichent plus
+    demandes = demandes.filter(rendezVousAVenir);
+    // Sécurité d'affichage : un médecin ne voit jamais les rendez-vous d'un autre médecin
+    if (modeMedecin && utilisateur.medecin_id) {
+      demandes = demandes.filter(function (d) { return String(d.medecin_id) === String(utilisateur.medecin_id); });
+    }
+    afficherDemandes(demandes);
   } catch (erreur) {
     msg(erreur.message, "err");
   }
@@ -49,8 +79,8 @@ function afficherDemandes(demandes) {
 
   if (demandes.length === 0) {
     const ligneVide = creer("tr");
-    const cellule = creer("td", "Aucun résultat pour ces critères.", "vide");
-    cellule.colSpan = 8;
+    const cellule = creer("td", modeMedecin ? "Aucun rendez-vous à venir." : "Aucune demande à venir pour ces critères.", "vide");
+    cellule.colSpan = afficherActions ? 8 : 7;
     ligneVide.append(cellule);
     corps.append(ligneVide);
     return;
@@ -78,9 +108,11 @@ function afficherDemandes(demandes) {
     }
     ligne.append(celluleStatut);
 
-    const celluleActions = creer("td");
-    celluleActions.append(creerBoutonsAction(demande));
-    ligne.append(celluleActions);
+    if (afficherActions) {
+      const celluleActions = creer("td");
+      celluleActions.append(creerBoutonsAction(demande));
+      ligne.append(celluleActions);
+    }
 
     corps.append(ligne);
   }
@@ -185,16 +217,18 @@ async function demarrer() {
     $("#boite-motif").append(option);
   }
 
-  // Liste déroulante des médecins pour le filtre
-  try {
-    const medecins = await apiFetch("/doctors");
-    for (const medecin of medecins) {
-      const option = creer("option", medecin.nom);
-      option.value = medecin.id;
-      $("#f-med").append(option);
+  // Liste déroulante des médecins pour le filtre (inutile pour un médecin)
+  if (!modeMedecin) {
+    try {
+      const medecins = await apiFetch("/doctors");
+      for (const medecin of medecins) {
+        const option = creer("option", medecin.nom);
+        option.value = medecin.id;
+        $("#f-med").append(option);
+      }
+    } catch (erreur) {
+      // pas grave : le filtre médecin restera sur « Tous »
     }
-  } catch (erreur) {
-    // pas grave : le filtre médecin restera sur « Tous »
   }
   chargerDemandes();
 }
