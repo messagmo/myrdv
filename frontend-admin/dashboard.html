@@ -8,6 +8,7 @@
 <header id="entete"></header>
 <main>
   <div id="msg"></div>
+  <h2 class="titre-page" id="titre-page"></h2>
   <div class="carte filtres">
     <div><label for="f-date">Date</label><input type="date" id="f-date"></div>
     <div><label for="f-med">Médecin</label><select id="f-med"><option value="">Tous</option></select></div>
@@ -19,7 +20,7 @@
   </div>
   <div class="carte tableau">
     <table>
-      <thead><tr><th>Patient</th><th>Service</th><th>Médecin</th><th>Date</th><th>Heure</th><th>Motif demandé</th><th>Statut</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Patient</th><th>Service</th><th>Médecin</th><th>Date</th><th>Heure</th><th>Motif demandé</th><th>Statut</th><th id="th-actions">Actions</th></tr></thead>
       <tbody id="corps"></tbody>
     </table>
   </div>
