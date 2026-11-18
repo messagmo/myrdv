@@ -21,6 +21,20 @@ let statutChoisi = "";   // "" = tous les statuts
 let decisionEnCours = null;
 
 
+// Un rendez-vous est « passé » quand sa date et son heure de fin sont dépassées.
+// Par défaut on ne les affiche plus (case « Afficher les rendez-vous passés »).
+function estPasse(demande) {
+  const fin = new Date(String(demande.date).slice(0, 10) + "T" + String(demande.heure_fin).slice(0, 5));
+  return fin <= new Date();
+}
+
+// Demandes à prendre en compte : toutes, ou seulement celles à venir
+function demandesVisibles() {
+  if ($("#f-passes").checked) return demandes;
+  return demandes.filter(function (d) { return !estPasse(d); });
+}
+
+
 // ----- 1. Charger les demandes -----
 async function chargerDemandes() {
   const filtres = new URLSearchParams();
@@ -50,9 +64,10 @@ function afficher() {
 function afficherPastilles() {
   const zone = $("#pills");
   zone.replaceChildren();
-  const choix = [["", "Tous", demandes.length]];
+  const visibles = demandesVisibles();
+  const choix = [["", "Tous", visibles.length]];
   for (const statut in LIBELLES) {
-    choix.push([statut, LIBELLES[statut], demandes.filter(function (d) { return d.statut === statut; }).length]);
+    choix.push([statut, LIBELLES[statut], visibles.filter(function (d) { return d.statut === statut; }).length]);
   }
   for (const [statut, libelle, nombre] of choix) {
     const pastille = creer("button", libelle + " ", "pill");
@@ -67,7 +82,7 @@ function afficherPastilles() {
 // Demandes qui correspondent au statut choisi et au texte recherché
 function demandesFiltrees() {
   const texte = $("#f-patient").value.trim().toLowerCase();
-  return demandes.filter(function (d) {
+  return demandesVisibles().filter(function (d) {
     if (statutChoisi && d.statut !== statutChoisi) return false;
     if (texte) {
       const identite = (d.patient_prenom + " " + d.patient_nom + " " + d.patient_telephone).toLowerCase();
@@ -83,7 +98,7 @@ function afficherCartes() {
   const lignes = demandesFiltrees();
 
   if (lignes.length === 0) {
-    liste.append(creer("p", "Aucune demande pour ces critères.", "empty"));
+    liste.append(creer("p", "Aucune demande à venir pour ces critères.", "empty"));
     return;
   }
 
@@ -192,11 +207,13 @@ $("#boite-valider").addEventListener("click", async function () {
 $("#f-date").addEventListener("change", chargerDemandes);   // filtres envoyés au serveur
 $("#f-med").addEventListener("change", chargerDemandes);
 $("#f-patient").addEventListener("input", afficherCartes);  // filtre appliqué ici
+$("#f-passes").addEventListener("change", afficher);
 
 $("#f-raz").addEventListener("click", function () {
   $("#f-date").value = "";
   $("#f-med").value = "";
   $("#f-patient").value = "";
+  $("#f-passes").checked = false;
   statutChoisi = "";
   chargerDemandes();
 });
