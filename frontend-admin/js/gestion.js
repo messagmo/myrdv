@@ -3,17 +3,16 @@
 // Les trois onglets fonctionnent de la même façon : un formulaire
 // pour ajouter/modifier + un tableau. Le code est écrit une seule
 // fois ; la description de chaque onglet est dans l'objet ONGLETS.
+// On ne supprime jamais : on désactive (le serveur garde l'historique).
 // ============================================================
 
-const utilisateurConnecte = garde();
-// Le médecin n'a pas accès à cette page : retour à son tableau de bord
-if (estMedecin(utilisateurConnecte)) location.href = "dashboard.html";
+garde();
 entete("gestion");
 
 const $ = function (selecteur) { return document.querySelector(selecteur); };
 
-// Date d'aujourd'hui au format AAAA-MM-JJ (un créneau ne peut pas être dans le passé)
-const AUJOURDHUI = new Date().toLocaleDateString("sv-SE");
+// Date d'aujourd'hui au format AAAA-MM-JJ, à l'heure de Douala (un créneau ne peut pas être dans le passé)
+const AUJOURDHUI = new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Douala" });
 
 // ----- Description de chaque onglet -----
 // champs   : zones du formulaire (cle = nom envoyé à l'API)
@@ -60,7 +59,7 @@ const ONGLETS = {
     ],
     colonnes: [
       { cle: "medecin", libelle: "Médecin" },
-      { cle: "date", libelle: "Date" },
+      { cle: "date", libelle: "Date", format: formatDate },
       { cle: "heure_debut", libelle: "Début" },
       { cle: "heure_fin", libelle: "Fin" }
     ],
@@ -76,15 +75,22 @@ let elementEnEdition = null;     // élément en cours de modification (null = o
 const donnees = { services: [], doctors: [], slots: [] };   // ce qui vient de l'API
 
 
-// ----- Créneaux : on ne garde que ceux qui ne sont pas terminés -----
-function finDuCreneau(creneau) {
-  return new Date(String(creneau.date).slice(0, 10) + "T" + String(creneau.heure_fin).slice(0, 5));
-}
-function creneauAVenir(creneau) {
-  return finDuCreneau(creneau) > new Date();
-}
+// ----- Créneaux : tri et filtres d'affichage -----
 function cleDeTri(creneau) {
   return String(creneau.date).slice(0, 10) + String(creneau.heure_debut).slice(0, 5);
+}
+function creneauTermine(creneau) {
+  return new Date(String(creneau.date).slice(0, 10) + "T" + String(creneau.heure_fin).slice(0, 5)) <= new Date();
+}
+
+// Créneaux visibles selon les filtres (médecin, date, créneaux passés)
+function creneauxVisibles() {
+  return donnees.slots.filter(function (c) {
+    if ($("#fc-med").value && String(c.medecin_id) !== $("#fc-med").value) return false;
+    if ($("#fc-date").value && String(c.date).slice(0, 10) !== $("#fc-date").value) return false;
+    if (!$("#fc-passes").checked && creneauTermine(c)) return false;
+    return true;
+  });
 }
 
 
@@ -93,11 +99,8 @@ async function chargerTout() {
   try {
     donnees.services = await apiFetch("/services");
     donnees.doctors = await apiFetch("/doctors");
-    // Les anciens créneaux (déjà terminés) ne s'affichent plus ; les autres sont triés par date
-    const tousLesCreneaux = await apiFetch("/slots");
-    donnees.slots = tousLesCreneaux.filter(creneauAVenir).sort(function (a, b) {
-      return cleDeTri(a).localeCompare(cleDeTri(b));
-    });
+    const creneaux = await apiFetch("/slots");
+    donnees.slots = creneaux.sort(function (a, b) { return cleDeTri(a).localeCompare(cleDeTri(b)); });
     dessinerPage();
   } catch (erreur) {
     msg(erreur.message, "err");
@@ -109,6 +112,7 @@ async function chargerTout() {
 function dessinerPage() {
   dessinerOnglets();
   $("#titre").textContent = (elementEnEdition ? "Modifier : " : "Ajouter : ") + ONGLETS[ongletActuel].titre.toLowerCase();
+  $("#filtres-creneaux").hidden = ongletActuel !== "slots";
   dessinerFormulaire();
   dessinerTableau();
 }
@@ -119,6 +123,7 @@ function dessinerOnglets() {
 
   for (const cle in ONGLETS) {
     const bouton = creer("button", ONGLETS[cle].titre, cle === ongletActuel ? "btn" : "btn sec");
+    bouton.type = "button";
     bouton.addEventListener("click", function () {
       ongletActuel = cle;
       elementEnEdition = null;
@@ -139,12 +144,14 @@ function dessinerFormulaire() {
     let zoneSaisie;
     if (champ.type === "liste") {
       // Liste déroulante : on ne propose que les éléments actifs
+      // (en modification, on garde aussi l'élément actuel même s'il est inactif)
       zoneSaisie = creer("select");
       const choisir = creer("option", "Choisir…");
       choisir.value = "";
       zoneSaisie.append(choisir);
       for (const x of donnees[champ.liste]) {
-        if (x.statut !== "actif") continue;
+        const estActuel = elementEnEdition && String(elementEnEdition[champ.cle]) === String(x.id);
+        if (x.statut !== "actif" && !estActuel) continue;
         const option = creer("option", x.nom);
         option.value = x.id;
         zoneSaisie.append(option);
@@ -152,6 +159,7 @@ function dessinerFormulaire() {
     } else {
       zoneSaisie = creer("input");
       zoneSaisie.type = champ.type;
+      if (champ.type === "text") zoneSaisie.maxLength = champ.cle === "description_courte" ? 255 : 100;
       if (champ.type === "date") zoneSaisie.min = AUJOURDHUI;
     }
     zoneSaisie.id = "c-" + champ.cle;
@@ -159,7 +167,7 @@ function dessinerFormulaire() {
 
     // En modification, on pré-remplit ; un champ « fixe » est bloqué
     if (elementEnEdition) {
-      zoneSaisie.value = elementEnEdition[champ.cle] ?? "";
+      zoneSaisie.value = String(elementEnEdition[champ.cle] ?? "").slice(0, champ.type === "date" ? 10 : 100);
       if (champ.fixe) zoneSaisie.disabled = true;
     }
     formulaire.append(etiquette, zoneSaisie);
@@ -182,7 +190,7 @@ function dessinerFormulaire() {
 
 function dessinerTableau() {
   const onglet = ONGLETS[ongletActuel];
-  const lignes = donnees[ongletActuel];
+  const lignes = ongletActuel === "slots" ? creneauxVisibles() : donnees[ongletActuel];
 
   // En-tête du tableau
   const enteteLigne = creer("tr");
@@ -196,9 +204,9 @@ function dessinerTableau() {
 
   if (lignes.length === 0) {
     const ligneVide = creer("tr");
-    const cellule = creer("td", "Rien à afficher. Utilisez le formulaire pour ajouter un élément.", "vide");
-    cellule.colSpan = 9;
-    ligneVide.append(cellule);
+    const celluleVide = creer("td", "Rien à afficher. Utilisez le formulaire pour ajouter un élément.", "vide");
+    celluleVide.colSpan = 9;
+    ligneVide.append(celluleVide);
     corps.append(ligneVide);
     return;
   }
@@ -207,16 +215,18 @@ function dessinerTableau() {
     const ligne = creer("tr");
 
     for (const colonne of onglet.colonnes) {
-      ligne.append(creer("td", String(element[colonne.cle] ?? "—")));
+      const valeur = element[colonne.cle];
+      const texte = valeur === null || valeur === undefined || valeur === "" ? "—" : (colonne.format ? colonne.format(valeur) : String(valeur));
+      ligne.append(cellule(texte, colonne.libelle));
     }
 
     // État : badge vert si actif/disponible, gris sinon
     const estActif = element.statut === onglet.actif;
-    const celluleEtat = creer("td");
+    const celluleEtat = cellule(undefined, "État");
     celluleEtat.append(creer("span", estActif ? onglet.texteActif : onglet.texteInactif, "badge " + (estActif ? "libre" : "annule")));
     ligne.append(celluleEtat);
 
-    const celluleActions = creer("td");
+    const celluleActions = cellule(undefined, "Actions");
     celluleActions.append(creerBoutons(element, estActif));
     ligne.append(celluleActions);
 
@@ -253,22 +263,37 @@ $("#form").addEventListener("submit", async function (evenement) {
   const saisie = {};
   for (const champ of onglet.champs) {
     const zone = $("#c-" + champ.cle);
-    if (zone.disabled) continue;                 // champ bloqué : on ne l'envoie pas
+    if (zone.disabled) continue;                   // champ bloqué : on ne l'envoie pas
     let valeur = zone.value.trim();
     if (valeur === "" && !champ.requis) continue;  // champ facultatif vide : on l'ignore
     if (champ.type === "liste") valeur = Number(valeur);   // l'API attend un nombre
     saisie[champ.cle] = valeur;
   }
 
+  // Contrôle rapide avant d'appeler le serveur (qui refait de toute façon la vérification)
+  if (ongletActuel === "slots") {
+    const debut = $("#c-heure_debut").value;
+    const fin = $("#c-heure_fin").value;
+    if (debut && fin && fin <= debut) {
+      msg("L'heure de fin doit être après l'heure de début.", "err");
+      return;
+    }
+  }
+
+  const boutonValider = $("#form button[type=submit]");
+  boutonValider.disabled = true;   // évite un double clic
   try {
     if (elementEnEdition) {
       // Modification : on n'envoie QUE les champs qui ont changé
       const modifications = {};
       for (const cle in saisie) {
-        if (String(saisie[cle]) !== String(elementEnEdition[cle] ?? "")) modifications[cle] = saisie[cle];
+        if (String(saisie[cle]) !== String(elementEnEdition[cle] ?? "").slice(0, ongletActuel === "slots" && cle === "date" ? 10 : 255)) {
+          modifications[cle] = saisie[cle];
+        }
       }
       if (Object.keys(modifications).length === 0) {
         msg("Aucune modification à enregistrer.", "err");
+        boutonValider.disabled = false;
         return;
       }
       await apiFetch("/" + ongletActuel + "/" + elementEnEdition.id, { method: "PATCH", body: JSON.stringify(modifications) });
@@ -299,4 +324,18 @@ async function changerEtat(element, estActif) {
 }
 
 
-chargerTout();
+// ----- 5. Filtres des créneaux -----
+$("#fc-date").addEventListener("change", dessinerTableau);
+$("#fc-passes").addEventListener("change", dessinerTableau);
+$("#fc-med").addEventListener("change", dessinerTableau);
+
+async function remplirFiltreMedecins() {
+  // La liste est remplie une fois que les médecins sont chargés
+  for (const medecin of donnees.doctors) {
+    const option = creer("option", medecin.nom);
+    option.value = medecin.id;
+    $("#fc-med").append(option);
+  }
+}
+
+chargerTout().then(remplirFiltreMedecins);

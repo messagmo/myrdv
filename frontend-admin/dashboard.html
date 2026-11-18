@@ -8,32 +8,40 @@
 <header id="entete"></header>
 <main>
   <div id="msg"></div>
-  <h2 class="titre-page" id="titre-page"></h2>
+  <h2 class="titre-page">Demandes de rendez-vous</h2>
+
+  <!-- Compteurs : un clic filtre le tableau sur ce statut -->
+  <div class="compteurs" id="compteurs"></div>
+
   <div class="carte filtres">
     <div><label for="f-date">Date</label><input type="date" id="f-date"></div>
     <div><label for="f-med">Médecin</label><select id="f-med"><option value="">Tous</option></select></div>
     <div><label for="f-statut">Statut</label>
       <select id="f-statut"><option value="">Tous</option><option value="en_attente">En attente</option>
       <option value="confirme">Confirmé</option><option value="refuse">Refusé</option><option value="annule">Annulé</option></select></div>
-    <button class="btn" id="f-ok">Rechercher</button>
-    <button class="btn sec" id="f-raz">Réinitialiser</button>
+    <div><label for="f-patient">Patient</label><input type="search" id="f-patient" placeholder="Nom ou téléphone"></div>
+    <button class="btn sec" id="f-raz" type="button">Réinitialiser</button>
   </div>
+
   <div class="carte tableau">
     <table>
-      <thead><tr><th>Patient</th><th>Service</th><th>Médecin</th><th>Date</th><th>Heure</th><th>Motif demandé</th><th>Statut</th><th id="th-actions">Actions</th></tr></thead>
+      <thead><tr><th>Patient</th><th>Service</th><th>Médecin</th><th>Date</th><th>Heure</th><th>Motif demandé</th><th>Statut</th><th>Actions</th></tr></thead>
       <tbody id="corps"></tbody>
     </table>
   </div>
 </main>
 
-<!-- Fenêtre pour choisir le motif d'un refus ou d'une annulation -->
+<!-- Fenêtre de décision : confirmer, refuser ou annuler -->
 <dialog id="boite">
   <h2 id="boite-titre"></h2>
-  <label for="boite-motif">Motif (obligatoire)</label>
-  <select id="boite-motif"></select>
-  <div class="erreur-boite" id="boite-erreur"></div>
+  <p id="boite-resume"></p>
+  <div id="boite-zone-motif">
+    <label for="boite-motif">Motif (obligatoire)</label>
+    <select id="boite-motif"></select>
+  </div>
+  <div class="erreur-boite" id="boite-erreur" role="alert"></div>
   <div class="boutons-boite">
-    <button class="btn sec" id="boite-annuler" type="button">Retour</button>
+    <button class="btn sec" id="boite-retour" type="button">Retour</button>
     <button class="btn" id="boite-valider" type="button">Valider</button>
   </div>
 </dialog>

@@ -10,6 +10,11 @@
   <div id="msg"></div>
   <div class="onglets" id="onglets"></div>
   <div class="carte"><h2 id="titre" style="margin-top:0"></h2><form id="form"></form></div>
+  <div class="carte filtres" id="filtres-creneaux" hidden>
+    <div><label for="fc-med">Médecin</label><select id="fc-med"><option value="">Tous</option></select></div>
+    <div><label for="fc-date">Date</label><input type="date" id="fc-date"></div>
+    <label class="case"><input type="checkbox" id="fc-passes"> Afficher les créneaux passés</label>
+  </div>
   <div class="carte tableau"><table><thead></thead><tbody></tbody></table></div>
 </main>
 <script src="js/api.js"></script>

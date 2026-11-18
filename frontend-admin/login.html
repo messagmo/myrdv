@@ -6,24 +6,30 @@
 <link rel="stylesheet" href="css/admin.css">
 </head><body>
 <main class="connexion">
+  <img src="img/logo.png" alt="MyRDV">
   <h1>MyRDV</h1><p>Espace administration</p>
   <div class="carte">
-    <h2 style="margin-top:0">Connexion du personnel et des médecins</h2>
+    <h2>Connexion du personnel</h2>
     <div id="msg"></div>
     <form id="form">
       <label for="identifiant">Identifiant</label>
-      <input id="identifiant" type="text" placeholder="Votre identifiant" required autocomplete="username">
+      <input id="identifiant" type="text" required autocomplete="username">
       <label for="mdp">Mot de passe</label>
-      <input id="mdp" type="password" placeholder="Votre mot de passe" required autocomplete="current-password">
-      <button class="btn large" type="submit">Se connecter</button>
+      <input id="mdp" type="password" required autocomplete="current-password">
+      <button class="btn large" type="submit" id="valider">Se connecter</button>
     </form>
   </div>
 </main>
 <script src="js/api.js"></script>
 <script>
+// Déjà connecté ? On va directement au tableau de bord.
+if (sessionStorage.getItem("token")) location.href = "dashboard.html";
+
 // Connexion : le serveur attend identifiant + mot_de_passe + profil "personnel"
 document.querySelector("#form").addEventListener("submit", async function (evenement) {
   evenement.preventDefault();
+  const bouton = document.querySelector("#valider");
+  bouton.disabled = true;
   try {
     const reponse = await apiFetch("/auth/login", {
       method: "POST",
@@ -34,15 +40,16 @@ document.querySelector("#form").addEventListener("submit", async function (evene
       })
     });
 
-    // Sécurité : seuls le personnel et les médecins entrent ici
+    // Sécurité : seuls l'administrateur et l'agent d'accueil entrent ici
     if (!ROLES_PERSONNEL.includes(reponse.utilisateur.role)) {
-      throw new Error("Accès réservé au personnel et aux médecins.");
+      throw new Error("Accès réservé au personnel.");
     }
     sessionStorage.setItem("token", reponse.token);
     sessionStorage.setItem("user", JSON.stringify(reponse.utilisateur));
     location.href = "dashboard.html";
   } catch (erreur) {
     msg(erreur.message, "err");
+    bouton.disabled = false;
   }
 });
 </script>
