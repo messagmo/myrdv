@@ -1,29 +1,25 @@
-<!DOCTYPE html>
-<html lang="fr"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MyRDV – Connexion du personnel</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
-<link rel="stylesheet" href="css/admin.css">
-</head><body>
-<main class="connexion">
-  <h1>MyRDV</h1><p>Espace administration</p>
-  <div class="carte">
-    <h2 style="margin-top:0">Connexion du personnel et des médecins</h2>
-    <div id="msg"></div>
-    <form id="form">
-      <label for="identifiant">Identifiant</label>
-      <input id="identifiant" type="text" placeholder="Votre identifiant" required autocomplete="username">
-      <label for="mdp">Mot de passe</label>
-      <input id="mdp" type="password" placeholder="Votre mot de passe" required autocomplete="current-password">
-      <button class="btn large" type="submit">Se connecter</button>
-    </form>
-  </div>
-</main>
-<script src="js/api.js"></script>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"><link rel="stylesheet" href="css/admin.css"><title>Connexion – MyRDV Admin</title></head><body>
+<div class="app">
+<div class="brand"><img src="img/logo.png" alt="MyRDV"><p>Espace administration</p></div>
+<main class="main">
+<h1 style="margin:8px 0 0;font-size:22px">Connexion du personnel</h1>
+<form id="form" class="main" style="padding:0">
+<div id="msg" class="error" role="alert"></div>
+<div class="field"><label for="identifiant">Identifiant</label><input class="input" id="identifiant" type="text" autocomplete="username" required></div>
+<div class="field"><label for="mdp">Mot de passe</label><input class="input" id="mdp" type="password" autocomplete="current-password" required></div>
+<button class="btn" id="valider" type="submit">Se connecter</button>
+</form>
+</main></div>
+<script src="js/ui.js"></script><script src="js/api.js"></script>
 <script>
+// Déjà connecté ? On va directement au tableau de bord.
+if (sessionStorage.getItem("token")) location.href = "dashboard.html";
+
 // Connexion : le serveur attend identifiant + mot_de_passe + profil "personnel"
 document.querySelector("#form").addEventListener("submit", async function (evenement) {
   evenement.preventDefault();
+  const bouton = document.querySelector("#valider");
+  bouton.disabled = true;
   try {
     const reponse = await apiFetch("/auth/login", {
       method: "POST",
@@ -33,16 +29,14 @@ document.querySelector("#form").addEventListener("submit", async function (evene
         profil: "personnel"
       })
     });
-
-    // Sécurité : seuls le personnel et les médecins entrent ici
-    if (!ROLES_PERSONNEL.includes(reponse.utilisateur.role)) {
-      throw new Error("Accès réservé au personnel et aux médecins.");
-    }
+    // Sécurité : seuls l'administrateur et l'agent d'accueil entrent ici
+    if (!ROLES_PERSONNEL.includes(reponse.utilisateur.role)) throw new Error("Accès réservé au personnel.");
     sessionStorage.setItem("token", reponse.token);
     sessionStorage.setItem("user", JSON.stringify(reponse.utilisateur));
     location.href = "dashboard.html";
   } catch (erreur) {
-    msg(erreur.message, "err");
+    document.querySelector("#msg").textContent = erreur.message;
+    bouton.disabled = false;
   }
 });
 </script>
