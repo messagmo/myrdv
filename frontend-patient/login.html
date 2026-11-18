@@ -1,0 +1,14 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"><link rel="stylesheet" href="css/style.css"><title>Connexion – MyRDV</title></head><body>
+<div class="app">
+<div class="brand"><img src="img/logo.png" alt="MyRDV"><p>Prenez rendez-vous, en toute simplicité</p></div>
+<main class="main">
+<h1 style="margin:8px 0 0;font-size:22px">Connexion</h1>
+<form id="form" class="main" style="padding:0" novalidate>
+<div id="error" class="error" role="alert"></div>
+<div class="field"><label for="tel">Numéro de téléphone</label><input class="input" id="tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="6XX XX XX XX" required></div>
+<div class="field"><label for="pw">Mot de passe</label><input class="input" id="pw" type="password" autocomplete="current-password" required></div>
+<button class="btn" id="submit" type="submit">Se connecter</button>
+</form>
+<p class="center">Pas encore de compte ? <a href="register.html">Créer un compte</a></p>
+</main></div>
+<script src="js/ui.js"></script><script src="js/format.js"></script><script src="js/auth.js"></script><script src="js/api.js"></script><script src="js/pages/login.js"></script></body></html>

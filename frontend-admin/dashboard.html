@@ -1,0 +1,31 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"><link rel="stylesheet" href="css/admin.css"><title>Demandes – MyRDV Admin</title></head><body>
+<div class="app">
+<header class="header"><h1>Demandes</h1><p id="qui">Espace administration</p><button class="link-btn" data-logout type="button">Se déconnecter</button><div class="chip"><img src="img/logo.png" alt="MyRDV"></div></header>
+<main class="main">
+<div id="msg" role="status"></div>
+<div class="pills" id="pills" role="group" aria-label="Filtrer par statut"></div>
+<div class="field"><label for="f-date">Date</label><input class="input" type="date" id="f-date"></div>
+<div class="field"><label for="f-med">Médecin</label><select class="input" id="f-med"><option value="">Tous les médecins</option></select></div>
+<div class="field"><label for="f-patient">Patient</label><input class="input" type="search" id="f-patient" placeholder="Nom ou téléphone"></div>
+<label class="check"><input type="checkbox" id="f-passes"> Afficher les rendez-vous passés</label>
+<button class="btn sec small" id="f-raz" type="button">Réinitialiser les filtres</button>
+<div id="list" class="main" style="padding:0" aria-live="polite"><p class="empty">Chargement…</p></div>
+</main>
+<nav class="tabs"><a href="dashboard.html" aria-current="page">Demandes</a><a href="gestion.html">Gestion</a></nav>
+</div>
+
+<!-- Fenêtre de décision : confirmer, refuser ou annuler -->
+<dialog id="boite">
+  <h2 id="boite-titre"></h2>
+  <p id="boite-resume"></p>
+  <div class="field" id="boite-zone-motif">
+    <label for="boite-motif">Motif (obligatoire)</label>
+    <select class="input" id="boite-motif"></select>
+  </div>
+  <div class="error" id="boite-erreur" role="alert"></div>
+  <div class="dialog-actions">
+    <button class="btn sec small" id="boite-retour" type="button">Retour</button>
+    <button class="btn small" id="boite-valider" type="button">Valider</button>
+  </div>
+</dialog>
+<script src="js/api.js"></script><script src="js/dashboard.js"></script></body></html>

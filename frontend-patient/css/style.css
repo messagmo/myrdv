@@ -1,0 +1,54 @@
+:root{--marine:#0B2A5B;--blue:#1F5FBF;--bg:#F4F8FD;--line:#D6E4F5;--muted:#4A5B75;--danger:#8A1C1C;--danger-bg:#FDE2E2}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Arial,sans-serif;background:var(--bg);color:var(--marine);line-height:1.4}
+.app{max-width:480px;margin:0 auto;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+.header{position:relative;background:var(--marine);color:#fff;padding:28px 20px 18px;padding-right:110px}
+.header h1{margin:0;font-size:22px}
+.header p{margin:4px 0 0;font-size:14px;color:#BFD3EE}
+.chip{position:absolute;right:16px;top:16px;width:76px;height:60px;background:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center}
+.chip img{width:64px;height:auto}
+.link-btn{background:none;border:0;padding:8px 0;color:#BFD3EE;font:600 14px Inter,Arial,sans-serif;text-decoration:underline;cursor:pointer;min-height:44px}
+.main{flex:1;padding:20px;display:flex;flex-direction:column;gap:14px}
+.brand{display:flex;flex-direction:column;align-items:center;gap:10px;padding:32px 20px 0}
+.brand img{width:240px;max-width:70%;height:auto}
+.brand p{margin:0;font-size:14px;font-style:italic;color:var(--muted)}
+.field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+.input{width:100%;min-height:46px;padding:0 12px;border:1px solid #8CA6C6;border-radius:10px;background:#fff;font:15px Inter,Arial,sans-serif;color:var(--marine)}
+.hint{font-size:12px;color:var(--muted);margin-top:4px}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.check input{width:22px;height:22px;margin:0;flex:none}
+.btn{background:var(--blue);color:#fff;border:0;border-radius:12px;min-height:48px;font:600 16px Inter,Arial,sans-serif;cursor:pointer}
+.btn:disabled{opacity:.6;cursor:wait}
+.error{background:var(--danger-bg);color:var(--danger);border-radius:10px;padding:10px 12px;font-size:14px}
+.error:empty{display:none}
+.center{text-align:center;font-size:14px;margin:0}
+a{color:var(--blue);font-weight:600}
+.card{display:flex;flex-direction:column;gap:4px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;text-decoration:none;color:var(--marine);font-weight:400}
+.card strong{font-size:16px}
+.card span{font-size:14px;color:var(--muted)}
+a.card:hover{border-color:var(--blue)}
+.tabs{display:flex;background:#fff;border-top:1px solid var(--line);position:sticky;bottom:0}
+.tabs a{flex:1;text-align:center;padding:14px 0 18px;font-size:13px;text-decoration:none;color:#5B6B82}
+.tabs a[aria-current=page]{color:var(--blue)}
+:focus-visible{outline:3px solid #19A7CE;outline-offset:2px}
+.pw{position:relative}
+.pw .input{padding-right:48px}
+.pw-toggle{position:absolute;right:0;top:0;width:46px;height:46px;background:none;border:0;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.pills{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.pill{flex:none;min-height:44px;padding:0 16px;border:1px solid #8CA6C6;border-radius:999px;background:#fff;color:var(--marine);font:600 14px Inter,Arial,sans-serif;cursor:pointer}
+.pill[aria-pressed=true]{background:var(--blue);border-color:var(--blue);color:#fff}
+.slots{display:flex;gap:8px;flex-wrap:wrap;border:0;padding:0;margin:0}
+.slots legend{font-size:13px;font-weight:600;margin-bottom:6px;padding:0}
+.slot input{position:absolute;opacity:0;width:1px;height:1px}
+.slot span{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border:1px solid #8CA6C6;border-radius:999px;background:#fff;font:600 14px Inter,Arial,sans-serif;cursor:pointer}
+.slot input:checked+span{background:var(--blue);border-color:var(--blue);color:#fff}
+.slot input:focus-visible+span{outline:3px solid #19A7CE;outline-offset:2px}
+textarea.input{padding:10px 12px;min-height:72px;resize:vertical}
+.btn.small{min-height:44px;font-size:14px}
+.btn.alt{background:#fff;color:var(--danger);border:1px solid var(--danger)}
+.tag{align-self:flex-start;font-size:12px;font-weight:600;border-radius:999px;padding:4px 10px}
+.tag.en_attente{background:#FFF1D6;color:#7A4B00}.tag.confirme{background:#DDF3E4;color:#14532D}
+.tag.refuse{background:var(--danger-bg);color:var(--danger)}.tag.annule{background:#E8EDF3;color:#3C4A5E}
+.success{background:#DDF3E4;color:#14532D;border-radius:10px;padding:10px 12px;font-size:14px}
+.back{color:#BFD3EE;font-size:14px;text-decoration:none;font-weight:400;display:inline-block;margin-bottom:6px}
+.empty{text-align:center;color:var(--muted);font-size:14px;margin:0}

@@ -1,0 +1,22 @@
+# Tests MyRDV : module SMS (Rôle 4)
+
+À rapprocher des scénarios de la section 12 du cahier des charges.
+Statut : OK / Partiel / KO / À faire / Sans objet.
+
+Les tests S1 à S9 sont réalisés avec `node backend/test-sms.js` (sans base de données) et le simulateur Africa's Talking Sandbox.
+Les tests S10 et S11 sont réalisés avec `node backend/test-bout-en-bout.js` : patient fictif, demande de rendez-vous, confirmation par le personnel via l'API, base PostgreSQL locale.
+
+| N° | Scénario | Résultat attendu | Résultat obtenu | Statut | Capture |
+|----|----------|------------------|-----------------|--------|---------|
+| S1 | SMS de confirmation en mode simulation | statut `simulation`, message affiché dans le terminal, rien envoyé | statut `simulation`, message affiché, numéro 655171889 transformé en +237655171889 | OK | |
+| S2 | SMS de confirmation en Sandbox | statut `reussite`, référence fournisseur, SMS visible dans le simulateur | statut `reussite`, référence ATXid_..., SMS reçu dans le simulateur | OK | sms-4-types-sandbox.png |
+| S3 | SMS de refus avec motif prédéfini | message avec « Motif : ... », statut `reussite` | « ...refusée. Motif : médecin indisponible. », statut `reussite`, SMS reçu | OK | sms-4-types-sandbox.png |
+| S4 | SMS d'annulation avec motif prédéfini | message avec « Motif : ... », statut `reussite` | « ...annulé. Motif : demande incomplète. », statut `reussite`, SMS reçu | OK | sms-4-types-sandbox.png, sms-4-types-sandbox-2.png |
+| S5 | SMS de rappel | message « rappel ... demain », statut `reussite` | « rappel de votre rendez-vous prévu demain à 09:30 », statut `reussite`, SMS reçu | OK | sms-4-types-sandbox-2.png |
+| S6 | Numéro invalide (12345) | statut `echec`, aucun envoi, pas de plantage | « Numéro invalide : +23712345 », statut `echec`, aucun plantage | OK | |
+| S7 | Clé API absente | statut `echec`, message « AT_API_KEY manquante » | « AT_API_KEY manquante dans .env », statut `echec`, aucun plantage | OK | |
+| S8 | Motif de plus de 60 caractères | motif coupé dans le SMS | Sans objet : le motif est une valeur prédéfinie (médecin indisponible, demande incomplète, autre motif), aucun texte libre n'atteint le SMS | Sans objet | |
+| S9 | Contenu du SMS | aucun nom de médecin, de service ni de symptôme | Les messages reçus ne contiennent ni médecin, ni service, ni symptôme | OK | sms-4-types-sandbox.png, sms-4-types-sandbox-2.png, sms-bout-en-bout-sandbox.png |
+| S10 | Échec du SMS | la confirmation du RDV n'est pas bloquée (avec la base du Rôle 2) | Clé API vide : confirmation du RDV n° 4 renvoyée en 200 (`"statut":"confirme"`), message serveur « AT_API_KEY manquante dans .env », ligne `echec` écrite dans la table, aucun plantage | OK | s10-decision-et-table.png, s10-serveur-echec-sms.png |
+| S11 | Journal des envois | chaque envoi (réussite, échec, simulation) est enregistré dans la table `notification` | Les 3 statuts sont présents en base : RDV 1 `simulation`, RDV 2 et 3 `reussite` (avec référence ATXid_...), RDV 4 `echec` (sans référence) | OK | s10-decision-et-table.png, table-notification-sandbox.png |
+| S12 | Rappel 24h avant (node-cron) | un seul rappel envoyé, uniquement pour les RDV confirmés | RDV n° 5 confirmé pour dans 24 h : 1er passage = 1 rappel traité (statut `reussite`, référence ATXid_..., SMS reçu dans le simulateur), 2e passage = 0 rappel (pas de doublon), une seule ligne `rappel` dans la table `notification`. Serveur : rappel planifié toutes les 15 minutes au démarrage. | OK | s12-rappel-passages.png, s12-simulateur-rappel.png, s12-table-rappel.png |
