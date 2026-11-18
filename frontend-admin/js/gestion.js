@@ -6,8 +6,7 @@
 // On ne supprime jamais : on désactive (le serveur garde l'historique).
 // ============================================================
 
-garde();
-entete("gestion");
+garde();   // sécurité : réservé au personnel
 
 const $ = function (selecteur) { return document.querySelector(selecteur); };
 
@@ -111,10 +110,9 @@ async function chargerTout() {
 // ----- 2. Dessiner la page -----
 function dessinerPage() {
   dessinerOnglets();
-  $("#titre").textContent = (elementEnEdition ? "Modifier : " : "Ajouter : ") + ONGLETS[ongletActuel].titre.toLowerCase();
   $("#filtres-creneaux").hidden = ongletActuel !== "slots";
   dessinerFormulaire();
-  dessinerTableau();
+  dessinerListe();
 }
 
 function dessinerOnglets() {
@@ -122,8 +120,9 @@ function dessinerOnglets() {
   zone.replaceChildren();
 
   for (const cle in ONGLETS) {
-    const bouton = creer("button", ONGLETS[cle].titre, cle === ongletActuel ? "btn" : "btn sec");
+    const bouton = creer("button", ONGLETS[cle].titre, "pill");
     bouton.type = "button";
+    bouton.setAttribute("aria-pressed", String(cle === ongletActuel));
     bouton.addEventListener("click", function () {
       ongletActuel = cle;
       elementEnEdition = null;
@@ -136,6 +135,7 @@ function dessinerOnglets() {
 function dessinerFormulaire() {
   const formulaire = $("#form");
   formulaire.replaceChildren();
+  formulaire.append(creer("h2", (elementEnEdition ? "Modifier : " : "Ajouter : ") + ONGLETS[ongletActuel].titre.toLowerCase()));
 
   for (const champ of ONGLETS[ongletActuel].champs) {
     const etiquette = creer("label", champ.libelle + (champ.requis ? "" : " (facultatif)"));
@@ -145,7 +145,7 @@ function dessinerFormulaire() {
     if (champ.type === "liste") {
       // Liste déroulante : on ne propose que les éléments actifs
       // (en modification, on garde aussi l'élément actuel même s'il est inactif)
-      zoneSaisie = creer("select");
+      zoneSaisie = creer("select", undefined, "input");
       const choisir = creer("option", "Choisir…");
       choisir.value = "";
       zoneSaisie.append(choisir);
@@ -157,7 +157,7 @@ function dessinerFormulaire() {
         zoneSaisie.append(option);
       }
     } else {
-      zoneSaisie = creer("input");
+      zoneSaisie = creer("input", undefined, "input");
       zoneSaisie.type = champ.type;
       if (champ.type === "text") zoneSaisie.maxLength = champ.cle === "description_courte" ? 255 : 100;
       if (champ.type === "date") zoneSaisie.min = AUJOURDHUI;
@@ -167,86 +167,74 @@ function dessinerFormulaire() {
 
     // En modification, on pré-remplit ; un champ « fixe » est bloqué
     if (elementEnEdition) {
-      zoneSaisie.value = String(elementEnEdition[champ.cle] ?? "").slice(0, champ.type === "date" ? 10 : 100);
+      zoneSaisie.value = String(elementEnEdition[champ.cle] ?? "").slice(0, champ.type === "date" ? 10 : 255);
       if (champ.fixe) zoneSaisie.disabled = true;
     }
-    formulaire.append(etiquette, zoneSaisie);
+    const champHtml = creer("div", undefined, "field");
+    champHtml.append(etiquette, zoneSaisie);
+    formulaire.append(champHtml);
   }
 
-  const boutonValider = creer("button", elementEnEdition ? "Enregistrer" : "Ajouter", "btn");
+  const boutons = creer("div", undefined, "row");
+  const boutonValider = creer("button", elementEnEdition ? "Enregistrer" : "Ajouter", "btn small");
   boutonValider.type = "submit";
-  formulaire.append(boutonValider);
+  boutons.append(boutonValider);
 
   if (elementEnEdition) {
-    const boutonAnnuler = creer("button", "Annuler", "btn sec");
+    const boutonAnnuler = creer("button", "Annuler", "btn small sec");
     boutonAnnuler.type = "button";
     boutonAnnuler.addEventListener("click", function () {
       elementEnEdition = null;
       dessinerPage();
     });
-    formulaire.append(boutonAnnuler);
+    boutons.append(boutonAnnuler);
   }
+  formulaire.append(boutons);
 }
 
-function dessinerTableau() {
+function dessinerListe() {
   const onglet = ONGLETS[ongletActuel];
   const lignes = ongletActuel === "slots" ? creneauxVisibles() : donnees[ongletActuel];
-
-  // En-tête du tableau
-  const enteteLigne = creer("tr");
-  for (const colonne of onglet.colonnes) enteteLigne.append(creer("th", colonne.libelle));
-  enteteLigne.append(creer("th", "État"), creer("th", "Actions"));
-  $("thead").replaceChildren(enteteLigne);
-
-  // Corps du tableau
-  const corps = $("tbody");
-  corps.replaceChildren();
+  const liste = $("#list");
+  liste.replaceChildren();
 
   if (lignes.length === 0) {
-    const ligneVide = creer("tr");
-    const celluleVide = creer("td", "Rien à afficher. Utilisez le formulaire pour ajouter un élément.", "vide");
-    celluleVide.colSpan = 9;
-    ligneVide.append(celluleVide);
-    corps.append(ligneVide);
+    liste.append(creer("p", "Rien à afficher. Utilisez le formulaire pour ajouter un élément.", "empty"));
     return;
   }
 
   for (const element of lignes) {
-    const ligne = creer("tr");
-
-    for (const colonne of onglet.colonnes) {
-      const valeur = element[colonne.cle];
-      const texte = valeur === null || valeur === undefined || valeur === "" ? "—" : (colonne.format ? colonne.format(valeur) : String(valeur));
-      ligne.append(cellule(texte, colonne.libelle));
-    }
-
-    // État : badge vert si actif/disponible, gris sinon
     const estActif = element.statut === onglet.actif;
-    const celluleEtat = cellule(undefined, "État");
-    celluleEtat.append(creer("span", estActif ? onglet.texteActif : onglet.texteInactif, "badge " + (estActif ? "libre" : "annule")));
-    ligne.append(celluleEtat);
+    const carte = creer("div", undefined, "card");
+    carte.append(creer("span", estActif ? onglet.texteActif : onglet.texteInactif, "tag " + element.statut));
 
-    const celluleActions = cellule(undefined, "Actions");
-    celluleActions.append(creerBoutons(element, estActif));
-    ligne.append(celluleActions);
-
-    corps.append(ligne);
+    // Première colonne en gras, les suivantes en petit
+    onglet.colonnes.forEach(function (colonne, i) {
+      const valeur = element[colonne.cle];
+      if (valeur === null || valeur === undefined || valeur === "") return;
+      const texte = colonne.format ? colonne.format(valeur) : String(valeur);
+      carte.append(i === 0 ? creer("strong", texte) : creer("span", colonne.libelle + " : " + texte));
+    });
+    carte.append(creerBoutons(element, estActif));
+    liste.append(carte);
   }
 }
 
 // Boutons Modifier + Activer/Désactiver (on ne supprime jamais)
 function creerBoutons(element, estActif) {
   const onglet = ONGLETS[ongletActuel];
-  const boite = creer("div", undefined, "actions");
+  const boite = creer("div", undefined, "row");
 
-  const boutonModifier = creer("button", "Modifier", "btn sec petit");
+  const boutonModifier = creer("button", "Modifier", "btn small sec");
+  boutonModifier.type = "button";
   boutonModifier.addEventListener("click", function () {
     elementEnEdition = element;
     dessinerPage();
     window.scrollTo(0, 0);
   });
 
-  const boutonEtat = creer("button", estActif ? onglet.boutonDesactiver : onglet.boutonActiver, "btn sec petit");
+  const boutonEtat = creer("button", estActif ? onglet.boutonDesactiver : onglet.boutonActiver, estActif ? "btn small alt" : "btn small ok");
+  boutonEtat.type = "button";
   boutonEtat.addEventListener("click", function () { changerEtat(element, estActif); });
 
   boite.append(boutonModifier, boutonEtat);
@@ -325,9 +313,9 @@ async function changerEtat(element, estActif) {
 
 
 // ----- 5. Filtres des créneaux -----
-$("#fc-date").addEventListener("change", dessinerTableau);
-$("#fc-passes").addEventListener("change", dessinerTableau);
-$("#fc-med").addEventListener("change", dessinerTableau);
+$("#fc-date").addEventListener("change", dessinerListe);
+$("#fc-passes").addEventListener("change", dessinerListe);
+$("#fc-med").addEventListener("change", dessinerListe);
 
 async function remplirFiltreMedecins() {
   // La liste est remplie une fois que les médecins sont chargés

@@ -1,22 +1,17 @@
-<!DOCTYPE html>
-<html lang="fr"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MyRDV – Gestion</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
-<link rel="stylesheet" href="css/admin.css">
-</head><body>
-<header id="entete"></header>
-<main>
-  <div id="msg"></div>
-  <div class="onglets" id="onglets"></div>
-  <div class="carte"><h2 id="titre" style="margin-top:0"></h2><form id="form"></form></div>
-  <div class="carte filtres" id="filtres-creneaux" hidden>
-    <div><label for="fc-med">Médecin</label><select id="fc-med"><option value="">Tous</option></select></div>
-    <div><label for="fc-date">Date</label><input type="date" id="fc-date"></div>
-    <label class="case"><input type="checkbox" id="fc-passes"> Afficher les créneaux passés</label>
-  </div>
-  <div class="carte tableau"><table><thead></thead><tbody></tbody></table></div>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"><link rel="stylesheet" href="css/admin.css"><title>Gestion – MyRDV Admin</title></head><body>
+<div class="app">
+<header class="header"><h1>Gestion</h1><p id="qui">Espace administration</p><button class="link-btn" data-logout type="button">Se déconnecter</button><div class="chip"><img src="img/logo.png" alt="MyRDV"></div></header>
+<main class="main">
+<div id="msg" role="status"></div>
+<div class="pills" id="onglets" role="group" aria-label="Rubriques"></div>
+<form id="form" class="card-form"></form>
+<div id="filtres-creneaux" class="card-form" hidden>
+  <div class="field"><label for="fc-med">Médecin</label><select class="input" id="fc-med"><option value="">Tous les médecins</option></select></div>
+  <div class="field"><label for="fc-date">Date</label><input class="input" type="date" id="fc-date"></div>
+  <label class="check"><input type="checkbox" id="fc-passes"> Afficher les créneaux passés</label>
+</div>
+<div id="list" class="main" style="padding:0" aria-live="polite"></div>
 </main>
-<script src="js/api.js"></script>
-<script src="js/gestion.js"></script>
-</body></html>
+<nav class="tabs"><a href="dashboard.html">Demandes</a><a href="gestion.html" aria-current="page">Gestion</a></nav>
+</div>
+<script src="js/api.js"></script><script src="js/gestion.js"></script></body></html>

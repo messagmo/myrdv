@@ -1,5 +1,7 @@
 # Espace administration MyRDV (Rôle 3)
 
+Présentation : reprise de la maquette du Rôle 1 (`frontend-patient/css/style.css` : en-tête marine avec logo, cartes, pastilles, étiquettes de statut, barre d'onglets en bas, champs et boutons identiques).
+
 Pages : `login.html` (connexion du personnel), `dashboard.html` (demandes), `gestion.html` (services, médecins, créneaux).
 
 ## Lancer

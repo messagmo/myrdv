@@ -4,7 +4,7 @@
 //   1. la configuration (adresse de l'API, libellés)
 //   2. apiFetch() : la fonction qui parle au serveur du Rôle 2
 //   3. la session : garde(), deconnexion()
-//   4. de petites fonctions d'affichage : creer(), msg(), entete()
+//   4. de petites fonctions d'affichage : creer(), formatDate(), msg()
 // ============================================================
 
 // ----- 1. Configuration -----
@@ -83,7 +83,7 @@ function deconnexion() {
 
 // ----- 4. Petites fonctions d'affichage -----
 
-// Crée un élément HTML. Exemple : creer("td", "Bonjour", "ma-classe")
+// Crée un élément HTML. Exemple : creer("span", "Bonjour", "tag")
 // On utilise textContent (jamais innerHTML) : le texte est affiché tel quel,
 // ce qui empêche l'injection de code malveillant.
 function creer(balise, texte, classe) {
@@ -93,14 +93,6 @@ function creer(balise, texte, classe) {
   return element;
 }
 
-// Crée une cellule de tableau. Le « libellé » sert à l'affichage sur téléphone,
-// où chaque ligne du tableau devient une carte (voir admin.css).
-function cellule(texte, libelle, classe) {
-  const td = creer("td", texte, classe);
-  td.dataset.label = libelle;
-  return td;
-}
-
 // "2026-11-20" devient "20/11/2026"
 function formatDate(date) {
   const [a, m, j] = String(date).slice(0, 10).split("-");
@@ -108,41 +100,17 @@ function formatDate(date) {
 }
 
 // Affiche un message dans la zone <div id="msg"> pendant 5 secondes.
-// type = "ok" (vert) ou "err" (rouge)
+// type = "ok" (vert) ou "err" (rouge). Mêmes styles que l'application patient.
 function msg(texte, type = "ok") {
   const zone = document.querySelector("#msg");
   zone.textContent = texte;
-  zone.className = type;
+  zone.className = type === "err" ? "error" : "success";
   zone.setAttribute("role", type === "err" ? "alert" : "status");
   clearTimeout(msg.minuteur);
-  msg.minuteur = setTimeout(function () { zone.className = ""; }, 5000);
+  msg.minuteur = setTimeout(function () { zone.textContent = ""; zone.className = ""; }, 5000);
 }
 
-// Construit la barre du haut (logo, liens, nom, déconnexion)
-// pageActive = "dashboard" ou "gestion"
-function entete(pageActive) {
-  const utilisateur = JSON.parse(sessionStorage.getItem("user") || "{}");
-
-  const logo = creer("img");
-  logo.src = "img/logo.png";
-  logo.alt = "";
-  const titre = creer("h1", "MyRDV");
-  titre.append(creer("small", "Espace administration"));
-  const marque = creer("div", undefined, "marque");
-  marque.append(logo, titre);
-
-  const lienDemandes = creer("a", "Demandes", pageActive === "dashboard" ? "actif" : "");
-  lienDemandes.href = "dashboard.html";
-  const lienGestion = creer("a", "Gestion", pageActive === "gestion" ? "actif" : "");
-  lienGestion.href = "gestion.html";
-  if (pageActive === "dashboard") lienDemandes.setAttribute("aria-current", "page");
-  if (pageActive === "gestion") lienGestion.setAttribute("aria-current", "page");
-
-  const boutonSortie = creer("button", "Déconnexion");
-  boutonSortie.addEventListener("click", deconnexion);
-
-  const navigation = creer("nav");
-  navigation.append(lienDemandes, lienGestion, creer("span", utilisateur.nom || ""), boutonSortie);
-
-  document.querySelector("#entete").append(marque, navigation);
-}
+// Pages protégées : bouton « Se déconnecter » et nom de la personne connectée
+document.querySelectorAll("[data-logout]").forEach(function (bouton) { bouton.addEventListener("click", deconnexion); });
+const nomConnecte = (JSON.parse(sessionStorage.getItem("user") || "null") || {}).nom;
+if (nomConnecte && document.querySelector("#qui")) document.querySelector("#qui").textContent = "Espace administration · " + nomConnecte;
